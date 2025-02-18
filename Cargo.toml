@@ -1,0 +1,37 @@
+[package]
+name = "llm_streaming"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+log = "0.4"
+env_logger = "0.11"
+
+tokio = { version = "1", features = ["full"] }
+
+tokio-websockets = { version = "0.11.2", features = [
+    "client",
+    "fastrand",
+    # "sha1_smol",
+    "ring",
+    "rustls-webpki-roots",
+] }
+
+axum = { version = "0.8.1", features = ["ws", "multipart"] }
+
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+    "charset",
+    "multipart",
+] }
+
+bilili_rs = { version = "0.2.1" }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8.20"
+
+anyhow = "1.0"
+bytes = "1.10.0"
+futures-util = "0.3.31"
