@@ -9,8 +9,8 @@ use bytes::Bytes;
 use reqwest::{multipart::Part, StatusCode};
 
 use crate::{
-    config::{DownstreamConfig, LLMConfig, TTSConfig},
-    llm::{llm::Content, llm_stable, tts},
+    config::{DownstreamConfig, FishTTS, LLMConfig, StableTTS, TTSConfig},
+    llm::{fish_tts, llm::Content, llm_stable, tts},
     stream_platform::CommentTx,
 };
 
@@ -282,9 +282,28 @@ impl LlmAgent {
             .map_err(|e| anyhow::anyhow!("llm_stable next_chunk error: {:?}", e))?
         {
             llm_reply.push_str(&chunk);
-            let audio = tts(&self.tts_config.base_url, &self.tts_config.speaker, &chunk)
-                .await
-                .map_err(|e| anyhow::anyhow!("tts error: {:?}", e));
+            let (vtb_name, audio) = match &self.tts_config {
+                TTSConfig::Stable(StableTTS {
+                    base_url,
+                    speaker,
+                    vtb_name,
+                }) => (
+                    vtb_name.to_string(),
+                    tts(base_url, speaker, &chunk)
+                        .await
+                        .map_err(|e| anyhow::anyhow!("tts error: {:?}", e)),
+                ),
+                TTSConfig::Fish(FishTTS {
+                    api_key,
+                    speaker,
+                    vtb_name,
+                }) => (
+                    vtb_name.to_string(),
+                    fish_tts(api_key, speaker, &chunk)
+                        .await
+                        .map_err(|e| anyhow::anyhow!("tts error: {:?}", e)),
+                ),
+            };
 
             if let Err(e) = &audio {
                 log::error!("tts failed: {:?}", e);
@@ -297,7 +316,7 @@ impl LlmAgent {
                 .send_segment(
                     &http_cli,
                     SendMsgRequest {
-                        vtb_name: self.tts_config.vtb_name.clone(),
+                        vtb_name,
                         text: Some(chunk),
                         motion: None,
                         voice,

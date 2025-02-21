@@ -15,10 +15,24 @@ pub struct LLMConfig {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct TTSConfig {
+pub struct FishTTS {
+    pub api_key: String,
+    pub speaker: String,
+    pub vtb_name: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct StableTTS {
     pub base_url: String,
     pub speaker: String,
     pub vtb_name: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "tts_platform")]
+pub enum TTSConfig {
+    Stable(StableTTS),
+    Fish(FishTTS),
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -73,11 +87,11 @@ fn test_serde() {
             api_key: None,
         },
         platform: bilibili,
-        tts: TTSConfig {
+        tts: TTSConfig::Stable(StableTTS {
             base_url: "http://tts.com".to_string(),
-            speaker: "xiaoyan".to_string(),
+            speaker: "speaker".to_string(),
             vtb_name: "vtb".to_string(),
-        },
+        }),
         downstream: DownstreamConfig {
             update_title_url: "http://update.com".to_string(),
             segment_url: "http://segment.com".to_string(),

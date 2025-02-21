@@ -33,6 +33,74 @@ async fn test_tts() {
     std::fs::write("./resources/test/out.wav", wav_audio).unwrap();
 }
 
+#[derive(Debug, serde::Serialize)]
+struct FishTTSRequest {
+    text: String,
+    chunk_length: usize,
+    format: String,
+    mp3_bitrate: usize,
+    reference_id: String,
+    normalize: bool,
+    latency: String,
+}
+
+impl FishTTSRequest {
+    fn new(speaker: String, text: String, format: String) -> Self {
+        Self {
+            text,
+            chunk_length: 200,
+            format,
+            mp3_bitrate: 128,
+            reference_id: speaker,
+            normalize: true,
+            latency: "normal".to_string(),
+        }
+    }
+}
+
+pub async fn fish_tts(token: &str, speaker: &str, text: &str) -> anyhow::Result<Bytes> {
+    let client = reqwest::Client::new();
+    let res = client
+        .post("https://api.fish.audio/v1/tts")
+        .header("content-type", "application/msgpack")
+        .header("authorization", &format!("Bearer {}", token))
+        .body(rmp_serde::to_vec_named(&FishTTSRequest::new(
+            speaker.to_string(),
+            text.to_string(),
+            "wav".to_string(),
+        ))?)
+        .send()
+        .await?;
+    let status = res.status();
+    if status != 200 {
+        let body = res.text().await?;
+        return Err(anyhow::anyhow!(
+            "tts failed, status:{}, body:{}",
+            status,
+            body
+        ));
+    }
+    let bytes = res.bytes().await?;
+    Ok(bytes)
+}
+
+#[tokio::test]
+async fn test_fish_tts() {
+    let token = std::env::var("FISH_API_KEY").unwrap();
+    let speaker = "256e1a3007a74904a91d132d1e9bf0aa";
+    let text = "hello fish";
+
+    let r = rmp_serde::to_vec_named(&FishTTSRequest::new(
+        speaker.to_string(),
+        text.to_string(),
+        "wav".to_string(),
+    ));
+    println!("{:x?}", r);
+
+    let wav_audio = fish_tts(&token, speaker, text).await.unwrap();
+    std::fs::write("./resources/test/out.wav", wav_audio).unwrap();
+}
+
 #[allow(unused)]
 #[derive(Debug, serde::Deserialize)]
 struct AsrResult {

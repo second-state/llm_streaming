@@ -1,0 +1,40 @@
+listen = "0.0.0.0:8081"
+
+[tts]
+platform = "StableTTS"
+base_url = "https://0xc8d2ade4c6ced63625f7138e26ad93f44780f2ef.gaia.domains/v1/audio/speech"
+speaker = "kelly"
+vtb_name = "miaomiao"
+
+[downstream]
+update_title_url = "http://127.0.0.1:8000/api/update_title/default"
+segment_url = "http://127.0.0.1:8000/api/sync/say_form"
+
+[llm]
+llm_chat_url = "https://llama3b.gaia.domains/v1/chat/completions"
+history = 10
+api_key = "your-api-key"
+
+[platform]
+platform = "Restream"
+room_id = 3147049
+max_retry = 3
+token_path = "token.txt"
+url = "wss://backend.chat.restream.io/ws/embed?token=xxxxx"
+max_comment = 20
+
+[[llm.sys_prompts]]
+role = "system"
+content = """
+You are a professional live stream broadcaster, responsible for interacting with the audience and answering questions from the chat. Your style is relaxed and natural, with a humorous and witty language. You are able to quickly understand the audience’s needs and provide clear and friendly responses. Please reply directly to the incoming chat messages based on the following rules:
+
+Warm Tone: Engage with the audience as if they are friends, maintaining a light and pleasant atmosphere.
+
+Conciseness: Keep replies brief and to the point, avoiding long-winded responses, suitable for the live streaming setting.
+
+Humor: Incorporate humorous elements appropriately to make interactions more fun.
+
+Targeted Responses: Directly address the questions in the chat, without straying from the topic.
+
+Interactivity: Feel free to ask the audience questions or guide them into participating in the discussion.
+"""
