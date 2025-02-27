@@ -172,7 +172,7 @@ struct StableStreamChunk {
 }
 
 impl StableLlmResponse {
-    const CHUNK_SIZE: usize = 20;
+    const CHUNK_SIZE: usize = 50;
 
     fn return_string_buffer(&mut self) -> anyhow::Result<Option<String>> {
         self.stopped = true;
@@ -182,6 +182,32 @@ impl StableLlmResponse {
             return Ok(Some(new_str));
         } else {
             return Ok(None);
+        }
+    }
+
+    fn push_str(&mut self, s: &str) -> Option<String> {
+        let mut ret = s;
+
+        loop {
+            if let Some(i) = ret.find(&['.', '!', '?', ';', '。', '！', '？', '；', '\n']) {
+                let (chunk, ret_) = if ret.is_char_boundary(i + 1) {
+                    ret.split_at(i + 1)
+                } else {
+                    ret.split_at(i + 3)
+                };
+
+                self.string_buffer.push_str(chunk);
+                ret = ret_;
+                if self.string_buffer.len() > Self::CHUNK_SIZE || self.string_buffer.ends_with("\n")
+                {
+                    let mut new_str = ret.to_string();
+                    std::mem::swap(&mut new_str, &mut self.string_buffer);
+                    return Some(new_str);
+                }
+            } else {
+                self.string_buffer.push_str(ret);
+                return None;
+            }
         }
     }
 
@@ -198,32 +224,20 @@ impl StableLlmResponse {
             let body = body.unwrap();
             let body = String::from_utf8_lossy(&body);
 
-            let mut chunks = vec![];
+            let mut chunks = String::new();
             body.split("data: ").for_each(|s| {
                 if s.is_empty() || s.starts_with("[DONE]") {
                     return;
                 }
 
                 if let Ok(chunk) = serde_json::from_str::<StableStreamChunk>(s.trim()) {
-                    chunks.push(chunk);
+                    if !chunk.choices[0].finish_reason.is_some() {
+                        chunks.push_str(&chunk.choices[0].delta.message);
+                    }
                 }
             });
 
-            for body in chunks {
-                if body.choices[0].finish_reason.is_some() {
-                    return self.return_string_buffer();
-                }
-
-                self.string_buffer.push_str(&body.choices[0].delta.message);
-            }
-
-            if self
-                .string_buffer
-                .ends_with(&[',', '.', '!', '?', ';', '，', '。', '！', '？', '；', '\n'])
-                && self.string_buffer.len() > Self::CHUNK_SIZE
-            {
-                let mut new_str = String::new();
-                std::mem::swap(&mut new_str, &mut self.string_buffer);
+            if let Some(new_str) = self.push_str(&chunks) {
                 return Ok(Some(new_str));
             }
         }
