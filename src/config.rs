@@ -29,7 +29,7 @@ pub struct StableTTS {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "tts_platform")]
+#[serde(tag = "platform")]
 pub enum TTSConfig {
     Stable(StableTTS),
     Fish(FishTTS),

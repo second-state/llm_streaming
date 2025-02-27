@@ -43,7 +43,10 @@ pub async fn llm_loop<P: StreamPlatform>(
                     log::info!("comment: {} -> {}", user, content);
                     let mut new_comment = LinkedList::new();
                     new_comment.push_back((user, content));
-                    let _ = tx.send(new_comment);
+                    if let Err(e) = tx.send(new_comment) {
+                        log::warn!("send comment to tx failed");
+                        comment_store = e;
+                    }
                 } else {
                     let mut new_comment = LinkedList::new();
                     std::mem::swap(&mut new_comment, &mut comment_store);

@@ -281,6 +281,7 @@ impl LlmAgent {
             .await
             .map_err(|e| anyhow::anyhow!("llm_stable next_chunk error: {:?}", e))?
         {
+            log::info!("start tts {}", chunk);
             llm_reply.push_str(&chunk);
             let (vtb_name, audio) = match &self.tts_config {
                 TTSConfig::Stable(StableTTS {
@@ -304,6 +305,7 @@ impl LlmAgent {
                         .map_err(|e| anyhow::anyhow!("tts error: {:?}", e)),
                 ),
             };
+            log::info!("tts done");
 
             if let Err(e) = &audio {
                 log::error!("tts failed: {:?}", e);
@@ -412,7 +414,7 @@ async fn stream_handler(
                 dynamic_prompts.pop_front();
             }
 
-            log::info!("llm_agent reply\n{:#?}", dynamic_prompts);
+            log::debug!("llm_agent reply\n{:#?}", dynamic_prompts);
             match llm_agent
                 .reply(
                     &llm_chat_url,
